@@ -1,0 +1,5 @@
+Create the venv -> python -m venv venv
+Activate venv -> ./venv/Scripts/Activate.ps1
+See all of the packages withing venv -> pip list
+Install your requirments -> pip install -r requirments.txt
+Deactivate venv -> deactivate

@@ -13,3 +13,5 @@ df = DataFeeder("SpaceshipTitanic/Data/train.csv")
 df.get_proccessed_train_data()
 
 print(df.train.head())
+nans = df.train[df.train["HomePlanet"].isna()]
+print(nans)

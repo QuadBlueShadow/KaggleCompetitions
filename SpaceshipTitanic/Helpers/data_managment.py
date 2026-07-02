@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import statistics
+import time
 
 class DataFeeder:
     def __init__(self, train_file_path = "", sub_file_path = ""):
@@ -33,17 +34,19 @@ class DataFeeder:
         df[column] = adjusted
 
     def fix_planet_nans(self, df: pd.DataFrame):
-        nans = df[df["HomePlanet"].isna()]
+        for i in range(len(df)):
+            row = df.iloc[i]
 
-        for i in range(len(nans)):
-            id = nans.iloc[i]["PassengerId"]
-            group = df[df["PassengerId"] == id]["Group"]
+            if type(row["HomePlanet"]) == float:
+                group = row["Group"]
 
-            print(group)
+                others = df[(df["Group"] == group) & (~df["HomePlanet"].isna())]
+                if len(others) > 0:
+                    planet = others.iloc[0]["HomePlanet"]
+                else:
+                    planet = "__MISSING__"
 
-            planet = df[(df["Group"] == group) & (~df["HomePlanet"].isna())].iloc[i]["HomePlanet"]
-            df[df["PassengerId"] == id]["HomePlanet"] = planet
-        return nans
+                df.loc[i, "HomePlanet"] = planet
 
     def get_proccessed_train_data(self):
         self.create_group_columns(self.train)
@@ -52,7 +55,6 @@ class DataFeeder:
         self.convert_column_to_binary(self.train,"VIP")
         self.convert_column_to_binary(self.train, "Transported")
 
-        nan_rows = self.fix_planet_nans(self.train)
-        print(nan_rows)
+        self.fix_planet_nans(self.train)
 
         return [], []

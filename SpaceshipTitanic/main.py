@@ -4,10 +4,12 @@ import statistics
 
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
-from SpaceshipTitanic.old.util import LogReg
 
 from Helpers.data_managment import DataFeeder
 
 import time
 
 df = DataFeeder("SpaceshipTitanic/Data/train.csv")
+df.get_proccessed_train_data()
+
+print(df.train.head())

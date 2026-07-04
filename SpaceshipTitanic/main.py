@@ -37,9 +37,9 @@ cross_validate(XGBClassifier, df, False, 5, **params)
 print()
 
 cbc = CatBoostClassifier(
-    iterations=800,
+    iterations=900,
     learning_rate=0.01,
-    depth=8,
+    depth=12,
     random_seed=42,
     verbose=0          # Suppresses training output
 )

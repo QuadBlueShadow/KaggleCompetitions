@@ -10,6 +10,7 @@ class DataFeeder:
             self.sumbission_data = pd.read_csv(sub_file_path)
         
         self.cols = self.train.columns
+        self.planet_dict = {}
 
     def create_group_columns(self, df: pd.DataFrame):
         """
@@ -124,14 +125,25 @@ class DataFeeder:
         df["Num"] = num
         df["Side"] = side
 
-    def get_proccessed_train_data(self, bins=5, test_bin=5):
-        test_bin -= 1
+    def set_home_planet_dict(self, df: pd.DataFrame):
+        unique_plantes = df["HomePlanet"].unique()
 
+        for i in range(len(unique_plantes)):
+            self.planet_dict[unique_plantes[i]] = i
+
+    def convert_planet_column(self, df: pd.DataFrame):
+        df["HomePlanet"] = df["HomePlanet"].map(self.planet_dict)
+
+    def set_proccessed_train_data(self):
         self.create_group_columns(self.train)
 
         self.fix_column_nans(self.train, by="Group", column="HomePlanet")
         self.fix_column_nans(self.train, by="Group", column="Cabin")
         self.fix_column_nans(self.train, by="Group", column="Destination")
+
+        self.train["Cabin"] = self.train["Cabin"].fillna("U/9/U")
+        self.train["HomePlanet"] = self.train["HomePlanet"].fillna("Missing")
+        self.train["Age"] = self.train["Age"].fillna(-1)
 
         #self.fill_na_col(self.train, "CryoSleep", False)
 
@@ -153,31 +165,68 @@ class DataFeeder:
         self.fix_column_nans(self.train, by="AvgSpending", column="Age", mean=False)
 
         self.train.dropna(inplace=True)
-        #self.train["CryoSleep"].replace("N/A", np.nan)
 
         self.convert_column_to_binary(self.train, "CryoSleep")
         self.convert_column_to_binary(self.train, "VIP")
         self.convert_column_to_binary(self.train, "Transported")
 
+        self.set_home_planet_dict(self.train)
+        self.convert_planet_column(self.train)
+
         self.get_cabin_info(self.train)
 
-        outgoing_data = self.train.loc[:, ("HomePlanet", "CryoSleep", "Age", "VIP", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck", "Group", "Group_PNum", "AvgSpending", "Deck", "Num", "Side")]
-        partitioned_data = np.array_split(outgoing_data, bins)
+    def get_proccessed_submission_data(self):
+        self.create_group_columns(self.sumbission_data)
 
-        test_data = partitioned_data[test_bin]
-        partitioned_data.pop(test_bin)
+        self.fix_column_nans(self.sumbission_data, by="Group", column="HomePlanet")
+        self.fix_column_nans(self.sumbission_data, by="Group", column="Cabin")
+        self.fix_column_nans(self.sumbission_data, by="Group", column="Destination")
 
-        train_data = np.concat(partitioned_data)
+        self.sumbission_data["Cabin"] = self.sumbission_data["Cabin"].fillna("U/9/U")
+        self.sumbission_data["HomePlanet"] = self.sumbission_data["HomePlanet"].fillna("Missing")
+        self.sumbission_data["Age"] = self.sumbission_data["Age"].fillna(-1)
 
-        return train_data, test_data
+        self.fix_column_nans(self.sumbission_data, by="CryoSleep", column="RoomService", mean=True)
+        self.fix_column_nans(self.sumbission_data, by="CryoSleep", column="FoodCourt", mean=True)
+        self.fix_column_nans(self.sumbission_data, by="CryoSleep", column="ShoppingMall", mean=True)
+        self.fix_column_nans(self.sumbission_data, by="CryoSleep", column="Spa", mean=True)
+        self.fix_column_nans(self.sumbission_data, by="CryoSleep", column="VRDeck", mean=True)
+
+        self.fix_column_nans(self.sumbission_data, by="Age", column="RoomService", mean=False)
+        self.fix_column_nans(self.sumbission_data, by="Age", column="FoodCourt", mean=False)
+        self.fix_column_nans(self.sumbission_data, by="Age", column="ShoppingMall", mean=False)
+        self.fix_column_nans(self.sumbission_data, by="Age", column="Spa", mean=False)
+        self.fix_column_nans(self.sumbission_data, by="Age", column="VRDeck", mean=False)
+
+        self.get_average_spending(self.sumbission_data)
+
+        self.fix_column_nans(self.sumbission_data, by="AvgSpending", column="CryoSleep", mean=False)
+        self.fix_column_nans(self.sumbission_data, by="AvgSpending", column="Age", mean=False)
+
+        self.convert_column_to_binary(self.sumbission_data, "CryoSleep")
+        self.convert_column_to_binary(self.sumbission_data, "VIP")
+        self.convert_planet_column(self.sumbission_data)
+
+        self.get_cabin_info(self.sumbission_data)
+
+        return self.sumbission_data.loc[:, ("HomePlanet", "CryoSleep", "Age", "VIP", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck", "Group", "Group_PNum", "AvgSpending", "Deck", "Num", "Side")]
     
     def get_data(self, bins=5, test_bin=5):
-        outgoing_data = self.train.loc[:, ("HomePlanet", "CryoSleep", "Age", "VIP", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck", "Group", "Group_PNum", "AvgSpending", "Deck", "Num", "Side")]
-        partitioned_data = np.array_split(outgoing_data, bins)
+        test_bin -= 1
 
-        test_data = partitioned_data[test_bin]
-        partitioned_data.pop(test_bin)
+        outgoing_features = self.train.loc[:, ("HomePlanet", "CryoSleep", "Age", "VIP", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck", "Group", "Group_PNum", "AvgSpending", "Deck", "Num", "Side")]
+        outgoing_labes = self.train.loc[:, "Transported"]
 
-        train_data = np.concat(partitioned_data)
+        partitioned_features = np.array_split(outgoing_features, bins)
+        partitioned_labels = np.array_split(outgoing_labes, bins)
 
-        return train_data, test_data
+        test_features = partitioned_features[test_bin]
+        partitioned_features.pop(test_bin)
+
+        test_labels = partitioned_labels[test_bin]
+        partitioned_labels.pop(test_bin)
+
+        train_features = np.concat(partitioned_features)
+        train_labels = np.concat(partitioned_labels)
+
+        return train_features, train_labels, test_features, test_labels

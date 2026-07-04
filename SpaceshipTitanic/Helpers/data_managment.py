@@ -33,28 +33,50 @@ class DataFeeder:
 
         df[column] = adjusted
 
-    def fix_planet_nans(self, df: pd.DataFrame):
-        for i in range(len(df)):
-            row = df.iloc[i]
+    def get_mode(self, series: pd.Series):
+        s = series.dropna()
 
-            if type(row["HomePlanet"]) == float:
-                group = row["Group"]
+        if len(s) > 0:
+            return s.mode() 
+        return np.nan
+    
+    def get_mean(self, series: pd.Series):
+        s = series.dropna()
 
-                others = df[(df["Group"] == group) & (~df["HomePlanet"].isna())]
-                if len(others) > 0:
-                    planet = others.iloc[0]["HomePlanet"]
-                else:
-                    planet = "__MISSING__"
+        if len(s) > 0:
+            return s.mean() if s.mean() != 0.0 else 0.0
+        return np.nan
+    
+    def get_average_spending(self, df: pd.DataFrame):
+        total = df["RoomService"] + df["FoodCourt"] + df["ShoppingMall"] + df["Spa"] + df["VRDeck"]
+        avg = total / 5
+        df["AvgSpending"] = avg
 
-                df.loc[i, "HomePlanet"] = planet
+    def fix_column_nans(self, df: pd.DataFrame, by = "Group", column = "HomePlanet", mean=False):
+        mapped = df.groupby(by)[column].agg(self.get_mode if not mean else self.get_mean)
+        if mean:
+            print(mapped)
+        df[column] = df[column].fillna(df[by].map(mapped))
 
-    def get_proccessed_train_data(self):
+    def fill_na_col(self, df:pd.DataFrame, column: str, num=False):
+        df[column] = df[column].fillna("N/A" if not num else 0)
+
+    def get_proccessed_train_data(self, bins=5):
         self.create_group_columns(self.train)
 
-        self.convert_column_to_binary(self.train, "CryoSleep")
-        self.convert_column_to_binary(self.train,"VIP")
-        self.convert_column_to_binary(self.train, "Transported")
+        self.fix_column_nans(self.train, by="Group", column="HomePlanet")
+        self.fix_column_nans(self.train, by="Group", column="Cabin")
+        self.fix_column_nans(self.train, by="Group", column="Destination")
+        self.fix_column_nans(self.train, by="CryoSleep", column="RoomService", mean=True)
+        # self.fix_column_nans(self.train, by="CryoSleep", column="FoodCourt", mean=True)
+        # self.fix_column_nans(self.train, by="CryoSleep", column="ShoppingMall", mean=True)
+        # self.fix_column_nans(self.train, by="CryoSleep", column="Spa", mean=True)
+        # self.fix_column_nans(self.train, by="CryoSleep", column="VRDeck", mean=True)
 
-        self.fix_planet_nans(self.train)
+        self.get_average_spending(self.train)
+
+        # self.convert_column_to_binary(self.train, "CryoSleep")
+        # self.convert_column_to_binary(self.train, "VIP")
+        # self.convert_column_to_binary(self.train, "Transported")
 
         return [], []

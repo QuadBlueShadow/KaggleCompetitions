@@ -39,7 +39,7 @@ print()
 cbc = CatBoostClassifier(
     iterations=900,
     learning_rate=0.01,
-    depth=12,
+    depth=10,
     random_seed=42,
     verbose=0          # Suppresses training output
 )
